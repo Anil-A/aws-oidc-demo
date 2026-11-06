@@ -23,7 +23,7 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
-          role-to-assume: arn:aws:iam::<acct>:role/GitHubOIDCTestRole
+          role-to-assume: arn:aws:iam::904345768944:role/GitHubOIDCTestRole
           aws-region: eu-west-2
 
       - name: Verify AWS identity
