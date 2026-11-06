@@ -1,5 +1,5 @@
 
-name: AWS OIDC S3 Deployment
+name: AWS OIDC S3 File Operations
 
 on:
   workflow_dispatch:
@@ -12,12 +12,12 @@ permissions:
   contents: read
 
 jobs:
-  deploy-to-s3:
-    name: Create S3 Bucket and Upload File
+  s3-operations:
+    name: Upload and List S3 Files
     runs-on: ubuntu-latest
 
     env:
-      AWS_REGION: eu-west-2
+      AWS_REGION: eu-north-1
       S3_BUCKET: aws-oidc-demo-anil-a-904345768944
 
     steps:
@@ -28,42 +28,40 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: arn:aws:iam::904345768944:role/GitHubOIDCTestRole
-          aws-region: eu-west-2
+          aws-region: eu-north-1
 
       - name: Verify AWS identity
         run: |
           aws sts get-caller-identity
 
-      - name: Create S3 bucket if it does not exist
+      - name: Create test files
         run: |
-          if aws s3api head-bucket \
-            --bucket "$S3_BUCKET" 2>/dev/null; then
-            echo "Bucket already exists."
-          else
-            aws s3api create-bucket \
-              --bucket "$S3_BUCKET" \
-              --region "$AWS_REGION" \
-              --create-bucket-configuration \
-              LocationConstraint="$AWS_REGION"
-            echo "Bucket created successfully."
-          fi
+          mkdir -p deployment
+          echo "Hello AWS S3!" > deployment/hello.txt
+          echo "Uploaded through GitHub Actions using OIDC." > deployment/info.txt
+          echo "This is my AWS DevOps learning project." > deployment/readme.txt
 
-      - name: Create test file
+      - name: Upload files to S3
         run: |
-          echo "Hello AWS! This file was deployed using GitHub OIDC." > test-file.txt
-
-      - name: Upload file to S3
-        run: |
-          aws s3 cp test-file.txt \
-            s3://$S3_BUCKET/test-file.txt
+          aws s3 cp deployment/ \
+            s3://$S3_BUCKET/demo/ \
+            --recursive
 
       - name: List S3 bucket contents
         run: |
-          echo "Listing S3 bucket contents..."
-          aws s3 ls s3://$S3_BUCKET/
+          echo "Listing S3 objects..."
+          aws s3 ls s3://$S3_BUCKET/ --recursive
 
-      - name: Verify uploaded object
+      - name: Download files from S3
         run: |
-          aws s3api head-object \
-            --bucket "$S3_BUCKET" \
-            --key test-file.txt
+          mkdir -p downloaded
+          aws s3 cp s3://$S3_BUCKET/demo/ \
+            downloaded/ \
+            --recursive
+
+      - name: Verify downloaded files
+        run: |
+          diff deployment/hello.txt downloaded/hello.txt
+          diff deployment/info.txt downloaded/info.txt
+          diff deployment/readme.txt downloaded/readme.txt
+          echo "All files successfully verified!"
